@@ -21,12 +21,17 @@
             qtdeMovimentos++;
         }
 
+        public void decrementarQtdeMovimentos()
+        {
+            qtdeMovimentos--;
+        }
+
         public bool existeMovPossiveis()
         {
             bool[,] mat = movimentoPossiveis();
             for(int i = 0; i < tab.linhas; i++)
             {
-                for(int j=0; j < tab.colunas; i++)
+                for(int j=0; j < tab.colunas; j++)
                 {
                     if (mat[i, j])
                         return true;

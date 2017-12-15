@@ -11,6 +11,7 @@ namespace xadrez
         public bool terminada { get; private set; }
         private HashSet<Peca> pecas;
         private HashSet<Peca> capturadas;
+        public bool xeque { get; private set; }
 
         public PartidadeXadrez()
         {
@@ -18,12 +19,13 @@ namespace xadrez
             turno = 1;
             jogadorAtual = Cor.Branca;
             terminada = false;
+            xeque = false;
             pecas = new HashSet<Peca>();
             capturadas = new HashSet<Peca>();
             colocarPecas();
         }
 
-        public void executaMovimento(Posicao origem, Posicao destino)
+        public Peca executaMovimento(Posicao origem, Posicao destino)
         {
             Peca p = tab.retirarPeca(origem);
             p.incremetQtdeMovimentos();
@@ -33,6 +35,8 @@ namespace xadrez
             {
                 capturadas.Add(pecaCapturada);
             }
+
+            return pecaCapturada;
         }
 
         public HashSet<Peca> pecasCapturadas(Cor cor)
@@ -62,6 +66,67 @@ namespace xadrez
             return aux;
         }
 
+        private Cor adversaria(Cor cor)
+        {
+            if (cor == Cor.Branca)
+                return Cor.Preta;
+            else
+                return Cor.Branca;
+        }
+
+        private Peca rei(Cor cor)
+        {
+            foreach(Peca x in emJogo(cor))
+            {
+                if (x is Rei)
+                    return x;
+            }
+            return null;
+        }
+
+        public bool estaEmXeque(Cor cor)
+        {
+            Peca R = rei(cor);
+            foreach(Peca x in emJogo(adversaria(cor)))
+            {
+                bool[,] mat = x.movimentoPossiveis();
+                if (mat[R.posicao.linha, R.posicao.coluna])
+                    return true;
+            }
+            return false;
+        }
+
+        public bool testeXequeMate(Cor cor)
+        {
+            if (!estaEmXeque(cor))
+            { 
+                return false;
+            }
+            foreach (Peca x in emJogo(cor))
+            {
+                bool[,] mat = x.movimentoPossiveis();
+                for (int i = 0; i < tab.linhas; i++)
+                {
+                    for (int j = 0; j < tab.colunas; j++)
+                    {
+                        if (mat[i, j])
+                        {
+                            Posicao origem = x.posicao;
+                            Posicao destino = new Posicao(i, j);
+                            Peca pecaCapturada = executaMovimento(origem, destino);
+                            bool testexeque = estaEmXeque(cor);
+                            desfazMovimento(origem, destino, pecaCapturada);
+                            if (!testexeque)
+                                return false;
+                        }
+                          
+                    }
+                }
+            }
+
+            return true;
+        }
+
         public void validarPosicaoDeOrigem(Posicao pos)
         {
             if (tab.peca(pos) == null)
@@ -86,9 +151,38 @@ namespace xadrez
 
         public void realizaJogada(Posicao origem, Posicao destino)
         {
-            executaMovimento(origem, destino);
-            turno++;
-            mudaJogador();
+            Peca pecacapturada = executaMovimento(origem, destino);
+
+            if (estaEmXeque(jogadorAtual))
+            {
+                desfazMovimento(origem, destino, pecacapturada);
+                throw new TabuleiroException("Você não pode se colocar em Cheque");
+            }
+
+            if (estaEmXeque(adversaria(jogadorAtual)))
+                xeque = true;
+            else
+                xeque = false;
+
+            if (testeXequeMate(adversaria(jogadorAtual)))
+                terminada = true;
+            else
+            {
+                turno++;
+                mudaJogador();
+            }
+        }
+
+        public void desfazMovimento(Posicao origem, Posicao destino, Peca pecaCapturada)
+        {
+            Peca P = tab.retirarPeca(destino);
+            P.decrementarQtdeMovimentos();
+            if (pecaCapturada != null)
+            {
+                tab.colocarPeca(pecaCapturada, destino);
+                capturadas.Remove(pecaCapturada);
+            }
+            tab.colocarPeca(P, origem);
         }
 
         private void mudaJogador()
@@ -108,15 +202,20 @@ namespace xadrez
         private void colocarPecas()
         {
             colocarNovaPeca('c', 1, new Torre(tab, Cor.Preta));
-            colocarNovaPeca('b', 2, new Rei(tab, Cor.Preta));
-            colocarNovaPeca('b', 5, new Torre(tab, Cor.Preta));
-            colocarNovaPeca('a', 7, new Rei(tab, Cor.Preta));
-            
+            colocarNovaPeca('d', 1, new Rei(tab, Cor.Preta)); 
+            colocarNovaPeca('e', 1, new Torre(tab, Cor.Preta));
+            colocarNovaPeca('c', 2, new Torre(tab, Cor.Preta));
+            colocarNovaPeca('d', 2, new Torre(tab, Cor.Preta));
+            colocarNovaPeca('e', 2, new Torre(tab, Cor.Preta));
 
-            colocarNovaPeca('b', 3, new Torre(tab, Cor.Branca));
-            colocarNovaPeca('b', 7, new Rei(tab, Cor.Branca));
-            colocarNovaPeca('d', 2, new Torre(tab, Cor.Branca));
-            colocarNovaPeca('h', 8, new Rei(tab, Cor.Branca));
+
+
+            colocarNovaPeca('c', 8, new Torre(tab, Cor.Branca));
+            colocarNovaPeca('d', 8, new Rei(tab, Cor.Branca));
+            colocarNovaPeca('e', 8, new Torre(tab, Cor.Branca));
+            colocarNovaPeca('c', 7, new Torre(tab, Cor.Branca));
+            colocarNovaPeca('d', 7, new Torre(tab, Cor.Branca));
+            colocarNovaPeca('e', 7, new Torre(tab, Cor.Branca));
         }
     }
 }
