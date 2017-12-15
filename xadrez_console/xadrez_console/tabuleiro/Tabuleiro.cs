@@ -20,6 +20,7 @@
 
         public Peca peca(Posicao pos)
         {
+            validarPosicao(pos);
             return pecas[pos.linha, pos.coluna];
         }
 
